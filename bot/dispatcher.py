@@ -1,22 +1,22 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Awaitable, Callable, Optional
+from typing import Callable, Optional
 from uuid import uuid4
 
 import new_buy
 from decorators import tg_handler
+from my_stickers import TANUKI_MONEY
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from steps import NewBuyStep
-from telegram import (CallbackQuery, Chat, ReplyKeyboardRemove, Update,
-                      constants, Sticker)
+from telegram import (CallbackQuery, Chat, ReplyKeyboardRemove, Sticker,
+                      Update, constants)
 from telegram.ext import (ApplicationBuilder, CallbackContext,
                           CallbackQueryHandler, CommandHandler, Defaults,
                           MessageHandler, filters)
 
 import config
 from models import Category, InviteToken, Purchase, Team, User
-from my_stickers import TANUKI_MONEY
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -25,7 +25,10 @@ logging.basicConfig(
 
 
 @tg_handler()
-async def start(db: Session, user: Optional[User], chat: Chat, update: Update, context: CallbackContext) -> None:
+async def start(
+    db: Session, user: Optional[User], chat: Chat,
+    update: Update, context: CallbackContext
+) -> None:
     if user:
         await context.bot.send_message(
             chat_id=chat.id, text=(

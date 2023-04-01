@@ -4,7 +4,7 @@ from typing import Callable
 from telegram.ext import CallbackContext
 from telegram import Update
 
-from bot.db import create_session
+from models.db import create_session
 from models import User
 # context manager
 
@@ -16,7 +16,7 @@ def tg_handler() -> Callable:
             update: Update, context: CallbackContext
         ) -> None:
             chat = update.effective_chat
-
+            print('chat is gotten')
             if not chat:
                 raise ValueError('No chat in update')
             with create_session() as db:

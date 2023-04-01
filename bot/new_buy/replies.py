@@ -14,15 +14,19 @@ async def process_amount_payment(
     update: Update, context: CallbackContext
 ) -> None:
     if not text or not text.split() or len(text.split()) != 2:
-        await context.bot.send_message(chat_id=chat.id, text=WRONG_NEW_BUY_MESSAGE)
+        await context.bot.send_message(
+            chat_id=chat.id, text=WRONG_NEW_BUY_MESSAGE)
         return
     try:
         purchase_name, amount = text.split()
         amount = int(amount)  # type: ignore
     except ValueError:
-        await context.bot.send_message(chat_id=chat.id, text=(WRONG_NEW_BUY_MESSAGE))
+        await context.bot.send_message(
+            chat_id=chat.id, text=(WRONG_NEW_BUY_MESSAGE))
         return
-    new_purchase = Purchase(purchase_name=purchase_name, price=amount, user_id=user.id)  # type: ignore
+    new_purchase = Purchase(
+        purchase_name=purchase_name,
+        price=amount, user_id=user.id)  # type: ignore
     db.add(new_purchase)
     user.telegram_step = NewBuyStep.category.value
 

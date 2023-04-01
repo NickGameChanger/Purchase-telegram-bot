@@ -17,7 +17,7 @@ def process_new_buy_callback(
         category_id = int(path[0])
         purchase_id = int(path[1])
     except ValueError:
-        raise ValueError
+        return
 
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
