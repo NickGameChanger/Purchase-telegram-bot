@@ -7,7 +7,7 @@ from telegram.ext import CallbackContext
 
 
 # TODO need to transfer it to the celery
-def process_new_buy_callback(
+async def process_new_buy_callback(
     db: Session, user: User, chat: Chat, callback: CallbackQuery,
     path: list[str], update: Update, context: CallbackContext
 ) -> None:
@@ -18,7 +18,6 @@ def process_new_buy_callback(
         purchase_id = int(path[1])
     except ValueError:
         return
-
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise ValueError('purchase was deleted')

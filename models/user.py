@@ -29,6 +29,8 @@ class User(Base):
     registration_completed_at = Column(Date, nullable=True)
     telegram_step = Column(TEXT, nullable=True)
 
+    month_budget = Column(Integer, nullable=True)
+
     @classmethod
     def by_chat_id(clt, db: Session, chat_id: int) -> Optional[User]:
         return db.query(User).filter(User.telegram_chat_id == chat_id).first()

@@ -2,10 +2,11 @@ import logging
 from datetime import datetime, timedelta
 from typing import Callable, Optional
 from uuid import uuid4
+from bot.messages import HELP_MESSAGE
+import new_buy, categories
 
-import new_buy
 from decorators import tg_handler
-from my_stickers import TANUKI_MONEY
+from messages import TANUKI_MONEY, ALL_COMMANDS_MESSAGE
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from steps import NewBuyStep
@@ -30,15 +31,7 @@ async def start(
     update: Update, context: CallbackContext
 ) -> None:
     if user:
-        await context.bot.send_message(
-            chat_id=chat.id, text=(
-                '<b>Привет👋!</b> \n\n'
-                '/new_buy — ввести новую покупку\n'
-                '/spent — ввести новую покупку'
-                '/start - регистрация/все команды'
-
-            )
-        )
+        await context.bot.send_message(chat_id=chat.id, text=ALL_COMMANDS_MESSAGE)
     else:
         new_team = Team(team_name='my_family')
         db.add(new_team)
@@ -50,7 +43,9 @@ async def start(
             sign_in_up(db, chat, update, context, user)
         await context.bot.send_message(
             chat_id=chat.id, text=(
-                '<b>Регистрация прошла успешно</b>'
+                'Приветствую, <b>{user_name}</b>! Вы успешно зарегистрировались в нашем боте аналитики расходов. '
+                'Теперь вы можете отслеживать свои расходы, управлять своим бюджетом и получать полезную статистику. '
+                'Если у вас есть вопросы или нужна помощь, пожалуйста, обратитесь к команде /help. Спасибо, что выбрали наш бот!'
             )
         )
         await context.bot.send_sticker(
@@ -58,14 +53,16 @@ async def start(
         )
 
 
-
 @tg_handler()
 async def invite_new_member(db: Session, user: User, chat: Chat, update: Update, context: CallbackContext) -> None:
     rand_token = str(uuid4())
     text = (
-        f'Отправьте [эту ссылку](https://t.me/AnaliticShoppingListBot?start={rand_token}) '
-        'тому кого хотите пригласить в ваше пространство человеку🤝,'
-        'с которым хотите разделить бота'
+        'Привет! Вы уже пользуетесь нашим ботом аналитики расходов и хотели бы поделиться им с семьей?'
+        'Это легко - отправьте им эту [реферальную ссылку](https://t.me/AnaliticShoppingListBot?start={rand_token}), '
+        'и пусть они авторизуются в боте. Если ваш друг уже использует бот, ему нужно сначала выйти из аккаунта,'
+        'нажав /logout, а затем перейти по [ссылке](https://t.me/AnaliticShoppingListBot?start={rand_token}). '
+        'После авторизации в боте они смогут использовать все его функции и'
+        'получать аналитику, как и вы!'
     )
     invite_token = InviteToken(token=rand_token, team_id=user.team_id)
     db.add(invite_token)
@@ -127,7 +124,7 @@ async def text(db: Session, user: Optional[User], chat: Chat, update: Update, co
         text_processor_function = TEXT_PROCESSOR_BY_CANDIDATE_STEP.get(step)
 
     if text_processor_function:
-        # ! TODO: make unified call
+        # ! TODO: make unified call ?WTF?
         if step_parameters:
             await text_processor_function(   # type: ignore
                 db, user, chat, text, update,
@@ -136,20 +133,8 @@ async def text(db: Session, user: Optional[User], chat: Chat, update: Update, co
         else:
             await text_processor_function(db, user, chat, text, update, context)
     else:
-        help_text = 'WTF?'
+        help_text = HELP_MESSAGE.format(user_name=user.first_name or user.telegram)
         await context.bot.send_message(chat_id=chat.id, text=help_text)
-
-
-@tg_handler()
-async def command_new_buy(db: Session, user: User, chat: Chat, update: Update, context: CallbackContext) -> None:
-    user.telegram_step = NewBuyStep.amount_payment.value
-
-    db.commit()
-    await context.bot.send_message(
-        chat_id=chat.id, text=(
-            'Введите пожалуйста название_покупки сумма:'
-        )
-    )
 
 
 @tg_handler()
@@ -157,7 +142,7 @@ async def add_new_category(db: Session, user: User, chat: Chat, update: Update, 
     if not context.args or len(context.args) != 1:
         await context.bot.send_message(
             chat_id=chat.id, text=(
-                'Введите пожалуйста /new_category название категории'
+                'Введите пожалуйста /new_category <b>название категории</b>'
             )
         )
         return
@@ -195,17 +180,16 @@ async def callback(db: Session, user: User, chat: Chat, update: Update, context:
         raise ValueError('Not a callback query')
     do_clear_markup = True
 
-    if callback_query.data and callback_query.data.endswith('_nocm'):
-        do_clear_markup = False
-
     path = (callback_query.data or '').split('__')
     route = path[0]
+    if callback_query.data and callback_query.data.endswith('__nocm'):
+        do_clear_markup = False
 
     callback_process_function = CALLBACK_PROCESSOR_BY_ROUTE.get(route)
 
     if callback_process_function:
-        callback_process_function(
-            db, user, chat, callback_query, path[1:], update, context)
+        await callback_process_function(
+            db, user, chat, callback_query, path[1:-1], update, context)
 
     if do_clear_markup:
         await clear_markup(callback_query)
@@ -217,6 +201,10 @@ async def clear_markup(callback: CallbackQuery) -> None:
 
 
 @tg_handler()
+async def set_budget(db: Session, user: User, chat: Chat, update: Update, context: CallbackContext) -> None:
+    return
+
+@tg_handler()
 async def unknown(chat: Chat, update: Update, context: CallbackContext) -> None:
     await context.bot.send_message(chat_id=chat.id, text="Sorry, I didn't understand that command.")
 
@@ -226,6 +214,7 @@ CallbackProcessor = Callable[[Session, User, Chat,
 
 CALLBACK_PROCESSOR_BY_ROUTE: dict[str, CallbackProcessor] = {
     'new_buy': new_buy.callbacks.process_new_buy_callback,
+    'clear_category': categories.callbacks.process_clear_markup_callback,
 }
 
 TextProcessor = Callable[[Session, User, Chat, str, Update, CallbackContext], None]
@@ -238,12 +227,13 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(
         config.TOKEN).defaults(Defaults(parse_mode=constants.ParseMode.HTML)).build()
     start_handler = CommandHandler('start', start)
-    new_buy_handler = CommandHandler('new_buy', command_new_buy)
+    new_buy_handler = CommandHandler('new_buy', new_buy.commands.command_new_buy)
     spent_handler = CommandHandler('spent', command_spent)
     callback_handler = CallbackQueryHandler(callback)
     new_category_handler = CommandHandler('new_category', add_new_category)
     add_new_member_handler = CommandHandler('invite_new_member', invite_new_member)
     connect_to_family_account = CommandHandler('authorize', connect_to_family_account)
+    clear_categories_handler = CommandHandler('clear_categories', categories.commands.clear_categories)
     logout_handler = CommandHandler('logout', logout)
 
     application.add_handler(new_buy_handler)
@@ -254,6 +244,7 @@ if __name__ == '__main__':
     application.add_handler(connect_to_family_account)
     application.add_handler(add_new_member_handler)
     application.add_handler(logout_handler)
+    application.add_handler(clear_categories_handler)
     text_handler = MessageHandler(filters.TEXT & (~filters.COMMAND) | filters.Sticker.ALL, text)
     application.add_handler(text_handler)
     application.run_polling()

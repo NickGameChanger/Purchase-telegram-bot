@@ -6,9 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 database_dsn = (
-    # f"postgresql+psycopg2://{config.DB['USER']}:{config.DB['PASSWORD']}"
-    # f"@{config.DB['HOST']}:{config.DB['PORT']}/{config.DB['DATABASE']}"
-    "postgresql://usr:pwd@db:5432/todos"
+    "postgresql://postgres:1234@localhost:5732/postgres"
+    # f"postgresql://{config.DB['USER']}:{config.DB['PASSWORD']}@"
+    # f"{config.DB['HOST']}:{config.DB['PORT']}/{config.DB['DATABASE']}"
 )
 
 engine = create_engine(

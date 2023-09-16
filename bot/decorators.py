@@ -16,7 +16,6 @@ def tg_handler() -> Callable:
             update: Update, context: CallbackContext
         ) -> None:
             chat = update.effective_chat
-            print('chat is gotten')
             if not chat:
                 raise ValueError('No chat in update')
             with create_session() as db:
